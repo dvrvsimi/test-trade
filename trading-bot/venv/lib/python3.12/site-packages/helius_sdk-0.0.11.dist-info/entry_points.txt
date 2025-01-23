@@ -1,0 +1,3 @@
+[console_scripts]
+helius-sdk = helius_sdk.cli:main
+

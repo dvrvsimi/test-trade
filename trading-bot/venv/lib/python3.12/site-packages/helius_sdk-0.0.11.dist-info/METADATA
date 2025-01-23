@@ -1,0 +1,114 @@
+Metadata-Version: 2.1
+Name: helius-sdk
+Version: 0.0.11
+Summary: Helius SDK
+Home-page: https://github.com/mmchougule/helius-sdk-python
+Author: Mayur Chougule
+Author-email: mayurchougule1@gmail.com
+License: MIT
+Project-URL: Documentation, https://helius-sdk-python.readthedocs.io/
+Project-URL: Changelog, https://helius-sdk-python.readthedocs.io/en/latest/changelog.html
+Project-URL: Issue Tracker, https://github.com/mmchougule/helius-sdk-python/issues
+Platform: UNKNOWN
+Classifier: Development Status :: 5 - Production/Stable
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: Unix
+Classifier: Operating System :: POSIX
+Classifier: Operating System :: Microsoft :: Windows
+Classifier: Programming Language :: Python
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: Implementation :: CPython
+Classifier: Programming Language :: Python :: Implementation :: PyPy
+Classifier: Topic :: Utilities
+Requires-Python: >=3.7
+Requires-Dist: click
+Requires-Dist: requests
+Requires-Dist: pyyaml
+Requires-Dist: polars
+Requires-Dist: pandas
+Requires-Dist: numpy
+Requires-Dist: pyarrow
+
+========
+Overview
+========
+
+
+
+WIP
+
+Installation
+============
+
+::
+
+    pip install helius-sdk
+
+You can also install the in-development version with::
+
+    pip install https://github.com/mmchougule/helius-sdk-python/archive/main.zip
+
+
+
+Examples
+========
+
+>>> export API_KEY=YOUR_API_KEY
+
+Get transaction details
+
+    >>> from helius_sdk.transaction import Transaction
+    >>> t = Transaction(api_key="api_key", tx_address="").get()
+    >>> t.shape
+
+Get nft sales
+
+    >>> from helius_sdk.event import Sale
+    >>> sale = Sale(api_key="api_key", col_address="").get()
+    >>> sale.shape
+
+Documentation
+=============
+
+
+https://helius-sdk-python.readthedocs.io/
+
+
+Development
+===========
+
+To run all the tests run::
+
+    tox
+
+Note, to combine the coverage data from all the tox environments run:
+
+.. list-table::
+    :widths: 10 90
+    :stub-columns: 1
+
+    - - Windows
+      - ::
+
+            set PYTEST_ADDOPTS=--cov-append
+            tox
+
+    - - Other
+      - ::
+
+            PYTEST_ADDOPTS=--cov-append tox
+
+
+Changelog
+=========
+
+0.0.0 (2023-04-09)
+------------------
+
+* First release on PyPI.
+
+
