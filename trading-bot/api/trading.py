@@ -1,18 +1,15 @@
+import os
 import time
+import json
 import base64
-import traceback
 import requests
+from solders import message
 from helius import BalancesAPI
 from solana.rpc.api import Client
-from solders.pubkey import Pubkey
 from solders.keypair import Keypair
 from solana.rpc.types import TxOpts
 from solana.rpc.commitment import Confirmed
 from solders.transaction import VersionedTransaction
-from dotenv import load_dotenv
-import os
-
-load_dotenv()
 
 
 HELIUS_API_KEY = os.getenv('HELIUS_API_KEY')
@@ -30,7 +27,7 @@ def fetch_wallet_balances():
             balances = client.get_balances(str(keypair.pubkey()))
             wallet_balances = {
                 "sol": {
-                    "amount": Decimal(balances["nativeBalance"]),
+                    "amount": int(balances["nativeBalance"]),
                     "decimals": 9
                 }
             }
@@ -49,8 +46,10 @@ def generate_jupiter_quote(execution_type, token_address, trade_amount, retries=
     try:
         if execution_type == "BUY":
             inputMint, outputMint = SOL_TOKEN_ADDRESS, token_address
-        else:
+        elif execution_type == "SELL":
             inputMint, outputMint = token_address, SOL_TOKEN_ADDRESS
+        else:
+            return
 
         payload = {
             "inputMint": inputMint,
@@ -62,7 +61,7 @@ def generate_jupiter_quote(execution_type, token_address, trade_amount, retries=
             "restrictIntermediateTokens": "true",
             "autoSlippageCollisionUsdValue": 1000
         }
-        r = requests.get("https://quote-api.jup.ag/v6/quote", params=payload)
+        r = requests.get("https://api.jup.ag/swap/v1/quote", params=payload)
         if r.status_code == 200:
             return r.json()
         elif r.status_code == 429:
@@ -73,7 +72,6 @@ def generate_jupiter_quote(execution_type, token_address, trade_amount, retries=
             time.sleep(1)
             return generate_jupiter_quote(execution_type, token_address, trade_amount, retries - 1)
         else:
-            log_error(f"error while generating quote for token: {token_address}\n{traceback.format_exc(chain=False)}")
             return
 
 
@@ -82,6 +80,9 @@ def generate_jupiter_swap(execution_type, token_address, trade_amount, retries=1
         quote_response = generate_jupiter_quote(execution_type, token_address, trade_amount)
         if quote_response is None:
             return {}
+
+        # sleep to avoid Jupiter rate limits
+        time.sleep(1.1)
 
         payload = {
             "userPublicKey": TRADING_WALLET_PUBLIC_KEY,
@@ -95,7 +96,7 @@ def generate_jupiter_swap(execution_type, token_address, trade_amount, retries=1
             "dynamicComputeUnitLimit": True,
             "quoteResponse": quote_response
         }
-        r = requests.post("https://quote-api.jup.ag/v6/swap", data=json.dumps(payload), headers={"Content-Type": "application/json"})
+        r = requests.post("https://api.jup.ag/swap/v1/swap", data=json.dumps(payload), headers={"Content-Type": "application/json"})
         if r.status_code == 200:
             return r.json()
         elif r.status_code == 429:
@@ -106,13 +107,11 @@ def generate_jupiter_swap(execution_type, token_address, trade_amount, retries=1
             time.sleep(1)
             return generate_jupiter_swap(execution_type, token_address, trade_amount, retries - 1)
         else:
-            log_error(f"error while generating swap for token: {token_address}\n{traceback.format_exc(chain=False)}")
             return {}
 
 
 def execute_positions_with_jupiter(execution_type, token_address, trade_amount, retries=10):
     if trade_amount == 0:
-        log_error(f"trade amount for {execution_type} order for token: {token_address} is zero")
         return
 
     try:
@@ -132,5 +131,14 @@ def execute_positions_with_jupiter(execution_type, token_address, trade_amount, 
             time.sleep(1)
             return execute_positions_with_jupiter(execution_type, token_address, trade_amount, retries - 1)
         else:
-            log_error(f"unable to open {execution_type} position for token {token_address}\n{traceback.format_exc(chain=False)}")
             return
+
+
+if __name__ == "__main__":
+    # buy usage
+    # 1e9 means 1,000,000,000 lamports ~ 1 SOL (9 decimals)
+    execute_positions_with_jupiter("BUY", "2qEHjDLDLbuBgRYvsxhc5D6uDWAivNFZGan56P1tpump", 1e9)
+
+    # sell usage
+    # 1e6 means 1,000,000 lamports ~ 1 PNUT (6 decimals)
+    execute_positions_with_jupiter("SELL", "2qEHjDLDLbuBgRYvsxhc5D6uDWAivNFZGan56P1tpump", 1e6)
